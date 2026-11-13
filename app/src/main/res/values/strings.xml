@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Pinam</string>
+    <string name="welcome_twi">Akwaaba!</string>
+    <string name="welcome_subtitle">Welcome to Pinam • A live map of your friendship</string>
+    <string name="medaase_thanks">Medaase! Pin dropped successfully 📍</string>
+    <string name="empty_circles_twi">Ɛte sɛn? You have no circles yet. Create your first one.</string>
+    <string name="ghana_post_invalid">Invalid Ghana Post format (e.g. GA-123-4567)</string>
+</resources>
