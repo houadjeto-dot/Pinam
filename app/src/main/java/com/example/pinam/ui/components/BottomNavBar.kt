@@ -2,6 +2,7 @@ package com.example.pinam.ui.components
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Map
@@ -12,11 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.pinam.ui.navigation.NavRoute
-import com.example.pinam.ui.theme.CoralPrimary
+import com.example.pinam.ui.theme.GhanaGoldPrimary
+import com.example.pinam.ui.theme.GhanaGreenSecondary
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     object Circles : BottomNavItem(NavRoute.Circles.route, "Circles", Icons.Default.Group)
     object Map : BottomNavItem("circle_map_tab", "Circle Map", Icons.Default.Map)
+    object Chat : BottomNavItem(NavRoute.ChatList.route, "Chat 💬", Icons.AutoMirrored.Filled.Chat)
     object Recommendations : BottomNavItem(NavRoute.Recommendations.route, "Recs", Icons.Default.Recommend)
 }
 
@@ -30,6 +33,7 @@ fun PinamBottomNavBar(
     val items = listOf(
         BottomNavItem.Circles,
         BottomNavItem.Map,
+        BottomNavItem.Chat,
         BottomNavItem.Recommendations
     )
 
@@ -41,6 +45,7 @@ fun PinamBottomNavBar(
             val isSelected = when (item) {
                 BottomNavItem.Circles -> currentRoute == NavRoute.Circles.route
                 BottomNavItem.Map -> currentRoute?.startsWith("circle_map") == true
+                BottomNavItem.Chat -> currentRoute == NavRoute.ChatList.route || currentRoute?.startsWith("chat_detail") == true
                 BottomNavItem.Recommendations -> currentRoute == NavRoute.Recommendations.route
             }
 
@@ -58,9 +63,9 @@ fun PinamBottomNavBar(
                 icon = { Icon(item.icon, contentDescription = item.title) },
                 label = { Text(item.title) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = CoralPrimary,
-                    selectedTextColor = CoralPrimary,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                    selectedIconColor = GhanaGreenSecondary,
+                    selectedTextColor = GhanaGreenSecondary,
+                    indicatorColor = GhanaGoldPrimary.copy(alpha = 0.3f)
                 )
             )
         }
@@ -75,8 +80,8 @@ fun DropPinFab(
     FloatingActionButton(
         onClick = onClick,
         shape = CircleShape,
-        containerColor = CoralPrimary,
-        contentColor = Color.White,
+        containerColor = GhanaGoldPrimary,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
     ) {
         Icon(Icons.Default.Add, contentDescription = "Drop a Pin")

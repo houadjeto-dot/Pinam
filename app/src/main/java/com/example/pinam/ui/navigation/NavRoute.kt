@@ -16,4 +16,8 @@ sealed class NavRoute(val route: String) {
     object CircleDetails : NavRoute("circle_details/{circleId}") {
         fun createRoute(circleId: String) = "circle_details/$circleId"
     }
+    object ChatList : NavRoute("chat_list")
+    object ChatDetail : NavRoute("chat_detail/{conversationId}") {
+        fun createRoute(conversationId: String) = "chat_detail/$conversationId"
+    }
 }

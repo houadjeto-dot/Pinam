@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 
 data class RecommendationUiState(
     val recommendations: List<Recommendation> = emptyList(),
+    val filteredRecommendations: List<Recommendation> = emptyList(),
+    val isStudyModeFilter: Boolean = false,
+    val selectedBudgetFilter: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
@@ -27,13 +30,40 @@ class RecommendationViewModel(
     private val _uiState = MutableStateFlow(RecommendationUiState())
     val uiState: StateFlow<RecommendationUiState> = _uiState.asStateFlow()
 
+    fun toggleStudyModeFilter() {
+        val newMode = !_uiState.value.isStudyModeFilter
+        _uiState.value = _uiState.value.copy(
+            isStudyModeFilter = newMode,
+            filteredRecommendations = applyFilters(_uiState.value.recommendations, newMode, _uiState.value.selectedBudgetFilter)
+        )
+    }
+
+    fun setBudgetFilter(budget: String?) {
+        val newBudget = if (_uiState.value.selectedBudgetFilter == budget) null else budget
+        _uiState.value = _uiState.value.copy(
+            selectedBudgetFilter = newBudget,
+            filteredRecommendations = applyFilters(_uiState.value.recommendations, _uiState.value.isStudyModeFilter, newBudget)
+        )
+    }
+
+    private fun applyFilters(list: List<Recommendation>, studyMode: Boolean, budget: String?): List<Recommendation> {
+        var filtered = list
+        if (studyMode) {
+            filtered = filtered.filter { rec ->
+                rec.vibeTag.contains("Study", ignoreCase = true) ||
+                rec.vibeTag.contains("wifi", ignoreCase = true) ||
+                rec.vibeTag.contains("light", ignoreCase = true)
+            }
+        }
+        return filtered
+    }
+
     fun loadRecommendations(userId: String) {
         if (userId.isBlank()) return
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
         viewModelScope.launch {
             try {
-                // 1. Fetch user's circles & calculate friend connection weights (shared circle count)
                 val circlesResult = circleRepository.getUserCircles(userId)
                 val circles = circlesResult.getOrDefault(emptyList())
 
@@ -46,7 +76,6 @@ class RecommendationViewModel(
                     }
                 }
 
-                // 2. Fetch pins across all user's circles
                 val allPins = mutableListOf<Pin>()
                 for (c in circles) {
                     val pinsResult = pinRepository.getPinsForCircle(c.id)
@@ -54,23 +83,23 @@ class RecommendationViewModel(
                 }
 
                 if (allPins.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(recommendations = emptyList(), isLoading = false)
+                    _uiState.value = _uiState.value.copy(
+                        recommendations = emptyList(),
+                        filteredRecommendations = emptyList(),
+                        isLoading = false
+                    )
                     return@launch
                 }
 
-                // 3. Fetch reactions for these pins
                 val pinIds = allPins.map { it.id }
                 val reactions = reactionRepository.getReactionsForPins(pinIds).getOrDefault(emptyList())
 
-                // 4. Group pins by normalized place name
                 val placeGroups = allPins.groupBy { it.placeName.trim().lowercase() }
                 val recList = mutableListOf<Recommendation>()
 
                 for ((_, pinsAtPlace) in placeGroups) {
-                    val placeName = pinsAtPlace.first().placeName
                     val samplePin = pinsAtPlace.first()
 
-                    // Collect all unique friends who interacted (dropped pin or reacted)
                     val interactingFriends = mutableSetOf<String>()
                     var placeScore = 0.0
 
@@ -89,25 +118,30 @@ class RecommendationViewModel(
                         }
                     }
 
-                    // Weight calculation based on friend connection closeness
                     for (fId in interactingFriends) {
                         placeScore += friendWeights[fId] ?: 1.0
+                    }
+
+                    // Boost places tagged "Good wifi" or "Has light"
+                    val tagsJoined = samplePin.displayVibeTags.joinToString(" ")
+                    if (tagsJoined.contains("wifi", ignoreCase = true) || tagsJoined.contains("light", ignoreCase = true)) {
+                        placeScore += 2.0
                     }
 
                     val friendCount = interactingFriends.size
                     val desc = when {
                         friendCount == 1 -> "1 of your friends loved this place"
                         friendCount > 1 -> "$friendCount of your friends loved this place"
-                        else -> "Popular in your circles"
+                        else -> "Popular in your circles 🇬🇭"
                     }
 
                     recList.add(
                         Recommendation(
-                            placeName = placeName,
+                            placeName = samplePin.placeName,
                             lat = samplePin.lat,
                             lng = samplePin.lng,
                             photoUrl = samplePin.photoUrl,
-                            vibeTag = samplePin.vibeTag,
+                            vibeTag = samplePin.displayVibeTags.joinToString(", "),
                             friendCount = friendCount,
                             score = placeScore,
                             descriptionText = desc,
@@ -116,11 +150,11 @@ class RecommendationViewModel(
                     )
                 }
 
-                // Rank recommendations by score and friend count
                 val sortedRecs = recList.sortedByDescending { it.score * 10 + it.friendCount }
 
                 _uiState.value = _uiState.value.copy(
                     recommendations = sortedRecs,
+                    filteredRecommendations = applyFilters(sortedRecs, _uiState.value.isStudyModeFilter, _uiState.value.selectedBudgetFilter),
                     isLoading = false
                 )
             } catch (e: Exception) {

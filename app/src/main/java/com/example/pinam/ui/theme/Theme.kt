@@ -4,21 +4,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val PinamGhanaColorScheme = lightColorScheme(
-    primary = GhanaGoldPrimary,
-    onPrimary = GhanaGoldOnPrimary,
-    primaryContainer = GhanaGoldContainer,
-    onPrimaryContainer = GhanaGoldOnContainer,
-    secondary = GhanaGreenSecondary,
-    onSecondary = GhanaGreenOnSecondary,
-    secondaryContainer = GhanaGreenContainer,
-    background = WarmOffWhiteBackground,
-    onBackground = NearBlackText,
-    surface = SurfaceWhite,
-    onSurface = NearBlackText,
-    outline = OutlineVariant,
-    error = GhanaRedError,
-    errorContainer = GhanaRedErrorContainer
+private val PinamPurpleColorScheme = lightColorScheme(
+    primary = PrimaryPurple,
+    onPrimary = OnPrimaryWhite,
+    primaryContainer = PrimaryPurpleContainer,
+    onPrimaryContainer = OnPrimaryPurpleContainer,
+    secondary = PrimaryPurple,
+    onSecondary = OnPrimaryWhite,
+    background = BackgroundWhite,
+    onBackground = TextNearBlack,
+    surface = SurfaceTintLavender,
+    onSurface = TextNearBlack,
+    outline = BorderLightGray,
+    error = DestructiveRed
 )
 
 @Composable
@@ -26,7 +24,7 @@ fun PinamTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = PinamGhanaColorScheme,
+        colorScheme = PinamPurpleColorScheme,
         typography = Typography,
         shapes = PinamShapes,
         content = content
