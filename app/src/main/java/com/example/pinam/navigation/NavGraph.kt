@@ -22,6 +22,7 @@ import com.example.pinam.data.PinItem
 import com.example.pinam.data.SampleData
 import com.example.pinam.ui.screens.*
 import com.example.pinam.ui.theme.*
+import com.example.pinam.viewmodel.AuthViewModel
 
 sealed class NavItem(val route: String, val title: String, val icon: ImageVector) {
     object Circles : NavItem("circles", "Circles", Icons.Default.Group)
@@ -31,10 +32,13 @@ sealed class NavItem(val route: String, val title: String, val icon: ImageVector
 
 @Composable
 fun PinamAppNavHost(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    authViewModel: AuthViewModel = remember { AuthViewModel() }
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    val authState by authViewModel.uiState.collectAsState()
 
     // Dynamic State for Circles, Pins, and Dialogs
     val circlesList = remember { mutableStateListOf(*SampleData.sampleCircles.toTypedArray()) }
@@ -96,11 +100,12 @@ fun PinamAppNavHost(
         ) {
             NavHost(
                 navController = navController,
-                startDestination = "auth"
+                startDestination = if (authState.currentUser != null) NavItem.Circles.route else "auth"
             ) {
                 // Auth Screen
                 composable("auth") {
                     AuthScreen(
+                        viewModel = authViewModel,
                         onAuthSuccess = {
                             navController.navigate(NavItem.Circles.route) {
                                 popUpTo("auth") { inclusive = true }

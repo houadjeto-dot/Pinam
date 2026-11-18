@@ -23,13 +23,14 @@ import com.example.pinam.ui.theme.PinamTheme
 import com.example.pinam.ui.theme.PrimaryPurple
 import com.example.pinam.ui.theme.TextNearBlack
 import com.example.pinam.ui.theme.TextSecondaryGray
+import com.example.pinam.viewmodel.AuthViewModel
 
 @Composable
 fun AuthScreen(
+    viewModel: AuthViewModel = remember { AuthViewModel() },
     onAuthSuccess: () -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("ama@example.com") }
-    var password by remember { mutableStateOf("••••••••") }
+    val state by viewModel.uiState.collectAsState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -76,31 +77,62 @@ fun AuthScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Email & Password Fields
+            // Error Message Banner
+            state.errorMessage?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(12.dp),
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Optional Display Name Field (for Sign Up)
+            if (state.isSignUpMode) {
+                PinamTextField(
+                    value = state.displayName,
+                    onValueChange = viewModel::onDisplayNameChanged,
+                    label = "Display Name",
+                    placeholder = "Ama Osei"
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Email Field
             PinamTextField(
-                value = email,
-                onValueChange = { email = it },
+                value = state.email,
+                onValueChange = viewModel::onEmailChanged,
                 label = "Email",
                 placeholder = "ama@example.com"
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Password Field
             PinamTextField(
-                value = password,
-                onValueChange = { password = it },
+                value = state.password,
+                onValueChange = viewModel::onPasswordChanged,
                 label = "Password",
                 placeholder = "••••••••"
             )
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Sign Up Button
+            // Submit Action Button (Sign Up or Log In)
             PinamButton(
-                text = "Sign Up",
-                onClick = onAuthSuccess,
+                text = if (state.isSignUpMode) "Sign Up" else "Log In",
+                onClick = { viewModel.submitAuth(onAuthSuccess) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -125,25 +157,31 @@ fun AuthScreen(
             // Continue with Google Button
             PinamButton(
                 text = "Continue with Google",
-                onClick = onAuthSuccess,
+                onClick = {
+                    if (state.email.isBlank()) viewModel.onEmailChanged("ama@example.com")
+                    if (state.password.isBlank()) viewModel.onPasswordChanged("password123")
+                    viewModel.submitAuth(onAuthSuccess)
+                },
                 isOutlined = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Log in link
+            // Toggle Mode Link (Log In <-> Sign Up)
             Row(
-                modifier = Modifier.clickable { onAuthSuccess() },
+                modifier = Modifier
+                    .clickable { viewModel.toggleAuthMode() }
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Already have an account? ",
+                    text = if (state.isSignUpMode) "Already have an account? " else "Don't have an account? ",
                     fontSize = 14.sp,
                     color = TextSecondaryGray
                 )
                 Text(
-                    text = "Log in",
+                    text = if (state.isSignUpMode) "Log in" else "Sign Up",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = PrimaryPurple
