@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "764966418845",
+    "project_id": "pinam-df864",
+    "storage_bucket": "pinam-df864.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:764966418845:android:197ad4e04e2c475709d774",
+        "android_client_info": {
+          "package_name": "com.group2.pinam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbSgzuEckFcMlIFPVxWPSxn51oJk47f_A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
