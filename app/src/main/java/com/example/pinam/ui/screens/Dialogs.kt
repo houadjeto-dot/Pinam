@@ -1,14 +1,10 @@
 package com.example.pinam.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -115,7 +111,85 @@ fun LeaveCircleDialog(
     )
 }
 
-// Create Circle Bottom Sheet / Dialog
+// Join Circle Dialog
+@Composable
+fun JoinCircleDialog(
+    onDismiss: () -> Unit = {},
+    onJoinSuccess: (String) -> Unit = {}
+) {
+    var inviteCode by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Join with code",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextNearBlack
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Enter the 6-character invite code from your friend:",
+                    fontSize = 13.sp,
+                    color = TextSecondaryGray
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                PinamTextField(
+                    value = inviteCode,
+                    onValueChange = {
+                        inviteCode = it.uppercase()
+                        errorMsg = null
+                    },
+                    placeholder = "e.g. PIN123"
+                )
+                if (errorMsg != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = errorMsg!!,
+                        color = DestructiveRed,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (inviteCode.isBlank()) {
+                        errorMsg = "Please enter an invite code"
+                    } else {
+                        onJoinSuccess(inviteCode)
+                    }
+                }
+            ) {
+                Text(
+                    text = "Join",
+                    color = PrimaryPurple,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "Cancel",
+                    color = TextSecondaryGray,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = Color.White
+    )
+}
+
+// Create Circle Bottom Sheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateCircleBottomSheet(
@@ -154,7 +228,11 @@ fun CreateCircleBottomSheet(
 
             PinamButton(
                 text = "Share invite link",
-                onClick = { onCreateSuccess(circleName) },
+                onClick = {
+                    if (circleName.isNotBlank()) {
+                        onCreateSuccess(circleName)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 

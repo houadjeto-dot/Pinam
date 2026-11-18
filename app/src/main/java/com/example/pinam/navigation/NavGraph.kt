@@ -17,10 +17,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.pinam.data.CircleItem
+import com.example.pinam.data.PinItem
+import com.example.pinam.data.SampleData
 import com.example.pinam.ui.screens.*
-import com.example.pinam.ui.theme.PrimaryPurple
-import com.example.pinam.ui.theme.TextNearBlack
-import com.example.pinam.ui.theme.TextSecondaryGray
+import com.example.pinam.ui.theme.*
 
 sealed class NavItem(val route: String, val title: String, val icon: ImageVector) {
     object Circles : NavItem("circles", "Circles", Icons.Default.Group)
@@ -35,8 +36,15 @@ fun PinamAppNavHost(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Dynamic State for Circles, Pins, and Dialogs
+    val circlesList = remember { mutableStateListOf(*SampleData.sampleCircles.toTypedArray()) }
+    var activeCircle by remember { mutableStateOf(circlesList.firstOrNull()) }
+    var selectedPin by remember { mutableStateOf(SampleData.rooftopCafePin) }
+
     var showCreateSheet by remember { mutableStateOf(false) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var showLeaveCircleDialog by remember { mutableStateOf<CircleItem?>(null) }
+    var showDeletePinDialog by remember { mutableStateOf(false) }
 
     val bottomNavItems = listOf(
         NavItem.Circles,
@@ -104,19 +112,30 @@ fun PinamAppNavHost(
                 // Circles Screen
                 composable(NavItem.Circles.route) {
                     CirclesScreen(
-                        onCircleClick = {
+                        circles = circlesList,
+                        onCircleClick = { circle ->
+                            activeCircle = circle
                             navController.navigate(NavItem.Map.route)
                         },
                         onCreateClick = { showCreateSheet = true },
-                        onJoinClick = { showCreateSheet = true }
+                        onJoinClick = { showJoinDialog = true },
+                        onLeaveCircle = { circle ->
+                            showLeaveCircleDialog = circle
+                        }
                     )
                 }
 
                 // Map Screen
                 composable(NavItem.Map.route) {
                     MapScreen(
+                        circleName = activeCircle?.name ?: "Osu Crew",
+                        friendCountText = "${activeCircle?.memberAvatars?.size ?: 4} friends",
+                        avatars = activeCircle?.memberAvatars ?: SampleData.sampleCircles[0].memberAvatars,
                         onAddPinClick = { navController.navigate("add_pin") },
-                        onPinDetailClick = { navController.navigate("pin_detail") }
+                        onPinDetailClick = { pin ->
+                            selectedPin = pin
+                            navController.navigate("pin_detail")
+                        }
                     )
                 }
 
@@ -131,8 +150,9 @@ fun PinamAppNavHost(
                 // Pin Detail Screen
                 composable("pin_detail") {
                     PinDetailScreen(
+                        pin = selectedPin,
                         onBack = { navController.popBackStack() },
-                        onDeleteClick = { showDeleteDialog = true },
+                        onDeleteClick = { showDeletePinDialog = true },
                         onEditClick = { navController.navigate("add_pin") }
                     )
                 }
@@ -140,28 +160,94 @@ fun PinamAppNavHost(
                 // Discover Screen
                 composable(NavItem.Discover.route) {
                     DiscoverScreen(
-                        onItemClick = { navController.navigate("pin_detail") }
+                        onItemClick = { discoverItem ->
+                            selectedPin = PinItem(
+                                id = discoverItem.id,
+                                placeName = discoverItem.placeName,
+                                vibeTag = discoverItem.vibeTags.firstOrNull() ?: "Cozy",
+                                authorAndDate = "Kofi · 2h ago",
+                                caption = discoverItem.friendLovedText,
+                                gradientBrush = discoverItem.gradientBrush
+                            )
+                            navController.navigate("pin_detail")
+                        }
                     )
                 }
             }
 
-            // Create Circle Sheet
+            // Create Circle Bottom Sheet
             if (showCreateSheet) {
                 CreateCircleBottomSheet(
                     onDismiss = { showCreateSheet = false },
-                    onCreateSuccess = {
+                    onCreateSuccess = { newName ->
+                        val newCircle = CircleItem(
+                            id = "c_${System.currentTimeMillis()}",
+                            name = newName,
+                            pinCountText = "0 pins",
+                            gradientBrush = listOf(
+                                GradientOrangeBrush,
+                                GradientTealBrush,
+                                GradientPinkBrush,
+                                GradientPurpleBrush
+                            ).random(),
+                            memberAvatars = listOf(
+                                "A" to AvatarOrange,
+                                "K" to AvatarGreen
+                            )
+                        )
+                        circlesList.add(0, newCircle)
+                        activeCircle = newCircle
                         showCreateSheet = false
                         navController.navigate(NavItem.Map.route)
                     }
                 )
             }
 
+            // Join Circle Dialog
+            if (showJoinDialog) {
+                JoinCircleDialog(
+                    onDismiss = { showJoinDialog = false },
+                    onJoinSuccess = { code ->
+                        val joinedCircle = CircleItem(
+                            id = "c_joined_${System.currentTimeMillis()}",
+                            name = "Joined Circle ($code)",
+                            pinCountText = "5 pins",
+                            gradientBrush = GradientTealBrush,
+                            memberAvatars = listOf(
+                                "A" to AvatarOrange,
+                                "K" to AvatarGreen,
+                                "E" to AvatarPink
+                            )
+                        )
+                        circlesList.add(0, joinedCircle)
+                        activeCircle = joinedCircle
+                        showJoinDialog = false
+                        navController.navigate(NavItem.Map.route)
+                    }
+                )
+            }
+
+            // Leave Circle Dialog
+            showLeaveCircleDialog?.let { circleToLeave ->
+                LeaveCircleDialog(
+                    circleName = circleToLeave.name,
+                    onDismiss = { showLeaveCircleDialog = null },
+                    onConfirmLeave = {
+                        circlesList.remove(circleToLeave)
+                        if (activeCircle?.id == circleToLeave.id) {
+                            activeCircle = circlesList.firstOrNull()
+                        }
+                        showLeaveCircleDialog = null
+                    }
+                )
+            }
+
             // Delete Pin Dialog
-            if (showDeleteDialog) {
+            if (showDeletePinDialog) {
                 DeletePinDialog(
-                    onDismiss = { showDeleteDialog = false },
+                    onDismiss = { showDeletePinDialog = false },
                     onConfirmDelete = {
-                        showDeleteDialog = false
+                        showDeletePinDialog = false
                         navController.popBackStack()
                     }
                 )
