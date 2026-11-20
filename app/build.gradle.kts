@@ -5,13 +5,13 @@ plugins {
 }
 
 android {
-    namespace = "com.example.pinam"
-    compileSdk = 37
+    namespace = "com.group2.pinam"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.pinam"
-        minSdk = 24
-        targetSdk = 37
+        applicationId = "com.group2.pinam"
+        minSdk = 26
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -47,7 +47,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.compose.material.icons.extended)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
