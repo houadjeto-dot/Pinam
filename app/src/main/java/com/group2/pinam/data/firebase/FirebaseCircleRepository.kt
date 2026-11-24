@@ -10,69 +10,84 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+class FirebaseCircleRepository : CircleRepository {
+    private val db = FirebaseFirestore.getInstance()
 
     override fun observeMyCircles(userId: String): Flow<List<Circle>> = callbackFlow {
+        if (userId.isBlank()) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
         }
+        val reg = db.collection("circles")
             .whereArrayContains("memberIds", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
-                }
+                val list = snapshot?.documents?.mapNotNull { d ->
+                    d.toObject(Circle::class.java)?.copy(id = d.id)
+                } ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { reg.remove() }
     }
 
     override fun observeCircle(circleId: String): Flow<Circle?> = callbackFlow {
+        if (circleId.isBlank()) {
             trySend(null)
             awaitClose { }
             return@callbackFlow
         }
+        val reg = db.collection("circles").document(circleId)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) {
+                if (error != null || (snapshot == null) || !snapshot.exists()) {
                     trySend(null)
                     return@addSnapshotListener
                 }
-                    trySend(circle)
-                }
+                val circle = snapshot.toObject(Circle::class.java)?.copy(id = snapshot.id)
+                trySend(circle)
             }
+        awaitClose { reg.remove() }
     }
 
-    override suspend fun createCircle(name: String, owner: User): Result<Circle> {
-            var attempts = 0
-                val existing = db.collection("circles")
-                    .whereEqualTo("inviteCode", code)
-                    .get()
-                    .await()
-            }
-
-                name = name,
-                inviteCode = code,
-                memberIds = listOf(owner.id)
-            )
-        }
+    override suspend fun createCircle(name: String, owner: User): Result<Circle> = runCatching {
+        val docRef = db.collection("circles").document()
+        val code = (100000..999999).random().toString()
+        val circle = Circle(
+            id = docRef.id,
+            name = name,
+            inviteCode = code,
+            memberIds = listOf(owner.id),
+        )
+        docRef.set(circle).await()
+        circle
     }
 
-    override suspend fun joinByCode(code: String, user: User): Result<Circle> {
-            val cleanCode = code.trim().uppercase()
-                .whereEqualTo("inviteCode", cleanCode)
-                .limit(1)
-                .get()
-                .await()
+    override suspend fun joinByCode(code: String, user: User): Result<Circle> = runCatching {
+        val cleanCode = code.trim()
+        val snap = db.collection("circles")
+            .whereEqualTo("inviteCode", cleanCode)
+            .limit(1)
+            .get()
+            .await()
 
-
-                .update("memberIds", FieldValue.arrayUnion(user.id))
-                .await()
-
+        if (snap.isEmpty) {
+            throw IllegalArgumentException("No circle found with code: $cleanCode")
         }
+
+        val doc = snap.documents.first()
+        doc.reference.update("memberIds", FieldValue.arrayUnion(user.id)).await()
+
+        val updatedDoc = doc.reference.get().await()
+        updatedDoc.toObject(Circle::class.java)?.copy(id = updatedDoc.id)
+            ?: throw IllegalStateException("Failed to parse joined circle")
     }
 
-    override suspend fun removeMember(circleId: String, userId: String): Result<Unit> {
-            db.collection("circles").document(circleId)
-                .update("memberIds", FieldValue.arrayRemove(userId))
-                .await()
-        }
+    override suspend fun removeMember(circleId: String, userId: String): Result<Unit> = runCatching {
+        db.collection("circles").document(circleId)
+            .update("memberIds", FieldValue.arrayRemove(userId))
+            .await()
     }
 }
