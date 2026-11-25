@@ -66,19 +66,12 @@ class FirebaseCircleRepository : CircleRepository {
     }
 
     override suspend fun joinByCode(code: String, user: User): Result<Circle> = runCatching {
-        val cleanCode = code.trim().uppercase()
         val snap = db.collection("circles")
-            .whereEqualTo("inviteCode", cleanCode)
-            .limit(1)
-            .get()
-            .await()
-
-        val doc = snap.documents.firstOrNull() ?: throw IllegalArgumentException("No circle with that code")
+            .whereEqualTo("inviteCode", code.trim().uppercase())
+            .limit(1).get().await()
+        val doc = snap.documents.firstOrNull() ?: error("No circle with that code")
         doc.reference.update("memberIds", FieldValue.arrayUnion(user.id)).await()
-
-        val updatedDoc = doc.reference.get().await()
-        updatedDoc.toObject(Circle::class.java)?.copy(id = doc.id)
-            ?: throw IllegalStateException("Failed to parse joined circle")
+        doc.reference.get().await().toObject(Circle::class.java)!!.copy(id = doc.id)
     }
 
     override suspend fun removeMember(circleId: String, userId: String): Result<Unit> = runCatching {

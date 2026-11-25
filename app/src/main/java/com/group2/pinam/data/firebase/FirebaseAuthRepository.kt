@@ -34,7 +34,7 @@ class FirebaseAuthRepository : AuthRepository {
                     _user.value = User(
                         id = firebaseUser.uid,
                         name = firebaseUser.displayName ?: "",
-                        email = firebaseUser.email ?: ""
+                        email = firebaseUser.email ?: "",
                     )
                 }
             }
