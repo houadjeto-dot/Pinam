@@ -1,10 +1,17 @@
 package com.group2.pinam.data.fake
 
+import com.group2.pinam.model.User
 import com.group2.pinam.model.Circle
 import com.group2.pinam.model.Pin
 
 object FakeData {
     const val ME = "u1"
+    val users = listOf(
+        User("u1", "Ama", "ama@example.com"),
+        User("u2", "Kofi", "kofi@example.com"),
+        User("u3", "Efua", "efua@example.com"),
+        User("u4", "Yaw", "yaw@example.com")
+    )
 
     val circles = listOf(
         Circle("c1", "Osu Crew", "OSU123", listOf("u1", "u2", "u3", "u4")),
