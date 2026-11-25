@@ -10,16 +10,33 @@ data class Recommendation(
 )
 
 /**
- * Recommendations are CALCULATED, not stored (as in the brief).
- * Starter version: group friends' pins by place, count distinct friends who posted or
- * marked "been there", most popular first. Pair 5 improves the ranking
- * (e.g. weight by how close the friends are).
+ * Recommendations are CALCULATED, not stored.
+ * Groups pins by normalized place name (trimmed, lowercase), excludes places the user
+ * has already been to (user is in beenThere), and counts distinct friends who posted,
+ * were there, or reacted. Sorted by friendCount descending.
  */
 fun buildRecommendations(pins: List<Pin>, me: String): List<Recommendation> =
-    pins.filter { it.authorId != me }
-        .groupBy { it.placeName }
-        .map { (place, ps) ->
-            val friends = (ps.map { it.authorId } + ps.flatMap { it.beenThere }).filter { it != me }.toSet()
-            Recommendation(place, ps.map { it.vibe }.distinct(), ps.first().photoUrl, friends.size)
+    pins.groupBy { it.placeName.trim().lowercase() }
+        .filterValues { ps -> ps.none { me in it.beenThere } }
+        .mapNotNull { (_, ps) ->
+            val friends = (
+                ps.map { it.authorId } +
+                ps.flatMap { it.beenThere } +
+                ps.flatMap { it.reactions.keys }
+            ).filter { it != me && it.isNotBlank() }.toSet()
+
+            if (friends.isEmpty()) {
+                null
+            } else {
+                val displayName = ps.firstOrNull { it.placeName.isNotBlank() }?.placeName?.trim() ?: ""
+                val photoUrl = ps.firstOrNull { it.photoUrl.isNotBlank() }?.photoUrl ?: ""
+                val vibes = ps.map { it.vibe }.filter { it.isNotBlank() }.distinct()
+                Recommendation(
+                    placeName = displayName,
+                    vibes = vibes,
+                    photoUrl = photoUrl,
+                    friendCount = friends.size
+                )
+            }
         }
         .sortedByDescending { it.friendCount }
