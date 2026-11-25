@@ -54,7 +54,7 @@ class FirebaseCircleRepository : CircleRepository {
 
     override suspend fun createCircle(name: String, owner: User): Result<Circle> = runCatching {
         val docRef = db.collection("circles").document()
-        val code = (100000..999999).random().toString()
+        val code = (1..6).map { ('A'..'Z').random() }.joinToString("")
         val circle = Circle(
             id = docRef.id,
             name = name,
@@ -66,22 +66,18 @@ class FirebaseCircleRepository : CircleRepository {
     }
 
     override suspend fun joinByCode(code: String, user: User): Result<Circle> = runCatching {
-        val cleanCode = code.trim()
+        val cleanCode = code.trim().uppercase()
         val snap = db.collection("circles")
             .whereEqualTo("inviteCode", cleanCode)
             .limit(1)
             .get()
             .await()
 
-        if (snap.isEmpty) {
-            throw IllegalArgumentException("No circle found with code: $cleanCode")
-        }
-
-        val doc = snap.documents.first()
+        val doc = snap.documents.firstOrNull() ?: throw IllegalArgumentException("No circle with that code")
         doc.reference.update("memberIds", FieldValue.arrayUnion(user.id)).await()
 
         val updatedDoc = doc.reference.get().await()
-        updatedDoc.toObject(Circle::class.java)?.copy(id = updatedDoc.id)
+        updatedDoc.toObject(Circle::class.java)?.copy(id = doc.id)
             ?: throw IllegalStateException("Failed to parse joined circle")
     }
 
