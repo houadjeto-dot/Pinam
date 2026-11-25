@@ -62,5 +62,6 @@ dependencies {
     implementation(libs.maps.compose)
     implementation(libs.play.services.location)
 
+    testImplementation("junit:junit:4.13.2")
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
